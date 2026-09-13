@@ -11,9 +11,16 @@
   async function request(path, options = {}) {
     if (!API_BASE) return { ok: false, offline: true, error: { code: 'API_NOT_CONFIGURED' } };
     try {
+      const token = await window.BiteyEnterpriseAuth?.getAccessToken?.();
+      const headers = {
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {})
+      };
       const response = await fetch(`${API_BASE}${path}`, {
         credentials: 'include',
-        headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) },
+        headers,
         ...options
       });
       let payload = null;
