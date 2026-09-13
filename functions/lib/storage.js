@@ -57,7 +57,7 @@ export function createStorage(env = {}, accessToken = null) {
     getCompanyForUser: companyForUser,
     updateCompany: (companyId, patch) => write("companies", "PATCH", patch, `id=eq.${encodeURIComponent(companyId)}`),
     getAssistant,
-    upsertAssistant: (companyId, input) => write("assistants", "POST", { ...input, company_id: companyId }, "on_conflict=company_id", "return=representation,resolution=merge-duplicates"),
+    upsertAssistant: (companyId, input) => write("assistants", "POST", { ...input, company_id: companyId }, "on_conflict=company_id,id", "return=representation,resolution=merge-duplicates"),
     listKnowledge: (companyId, assistantId) => many("knowledge_sources", `company_id=eq.${encodeURIComponent(companyId)}&assistant_id=eq.${encodeURIComponent(assistantId)}&select=*&order=created_at.desc`),
     addKnowledge: (companyId, assistantId, input) => write("knowledge_sources", "POST", { ...input, company_id: companyId, assistant_id: assistantId }),
     listChannels: (companyId, assistantId) => many("channel_identities", `company_id=eq.${encodeURIComponent(companyId)}&assistant_id=eq.${encodeURIComponent(assistantId)}&select=*&order=created_at.asc`),
