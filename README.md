@@ -4,15 +4,48 @@
 
 It is part of the Bitey ecosystem and is intentionally separated from the Android application repository.
 
-## Project separation
+## Ecosystem architecture
+
+Bitey Enterprise does **not** create a separate cognitive brain or a parallel ecosystem memory system.
+
+The architecture is centered on two existing GitHub systems and one shared Supabase persistence layer:
+
+- **`raylerr481/bitey-web` — Bitey IA Web:** the **central cognitive brain** of Bitey IA.
+- **`raylerr481/bitefixes-backend` — BiteFixes Backend:** the **specialized Bitey IA Empresarial** and authoritative BiteFixes business/API backend.
+- **`bitefixes-backed` — Supabase/Postgres:** the **single shared canonical memory/data instance** for the Bitey/BiteFixes architecture.
+
+```text
+                         BITEY IA ECOSYSTEM
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+          Bitey IA Web / GitHub        BiteFixes Backend / GitHub
+          CENTRAL COGNITIVE BRAIN      SPECIALIZED ENTERPRISE AI
+                    │                           │
+                    └─────────────┬─────────────┘
+                                  │
+                         shared contracts
+                                  │
+                                  ▼
+                     Supabase/Postgres
+                       `bitefixes-backed`
+                  SINGLE MEMORY / DATA LAYER
+                                  │
+                                  ▼
+                         Bitey Enterprise
+                         business control plane
+```
+
+### Project separation
 
 - **`bitey-enterprise`** — Web application and business control plane. Target: Cloudflare Pages.
 - **`bitey-enterprise-app`** — Android/mobile application (Expo/React Native). This repository remains Android-focused.
-- **`bitey-web`** — General Bitey AI experience; independent from Bitey Enterprise and BiteFixes.
-- **`bitey-system-bots-trading`** — Bitey SBT trading module; independent from Bitey Enterprise.
+- **`bitey-web`** — Central/general Bitey IA cognitive brain.
+- **`bitefixes-backend`** — Specialized BiteFixes enterprise AI/business backend.
+- **`bitey-system-bots-trading`** — Bitey SBT trading module; independent from Bitey Enterprise business data.
 - **`JobIA`** — Job intelligence and matching module.
 
-Bitey Enterprise must not modify or depend on the private operational context of unrelated Bitey modules unless an explicit integration contract is defined.
+Bitey Enterprise must integrate through explicit contracts. It must not duplicate the central brain, create a parallel Supabase memory system, or modify unrelated operational systems implicitly.
 
 ## Purpose
 
@@ -27,6 +60,22 @@ Bitey Enterprise provides a business-facing workspace where an organization can:
 7. Monitor readiness and activate the assistant only when required checks pass.
 
 The assistant is a first-class business resource rather than a generic chatbot configuration.
+
+## Cognitive and enterprise responsibilities
+
+**Bitey IA Web** provides the central/general cognitive capabilities: reasoning, planning, general context, memory access, model/tool orchestration, evaluation, policies and coordination of specialized capabilities.
+
+**BiteFixes Backend** provides the specialized enterprise/business layer: BiteFixes CRM, SaaS, tenant operations, business APIs, AI-agent implementation and contextual Bitey IA Empresarial behavior.
+
+**Bitey Enterprise** is the business control plane used to configure, validate and manage enterprise assistant resources. It does not replace either intelligence layer.
+
+## Shared memory and data
+
+**`bitefixes-backed` is the single canonical Supabase/Postgres memory/data instance for the Bitey IA Web and BiteFixes Backend architecture.**
+
+Bitey Enterprise must integrate with this architecture through secure backend/API contracts. It must not introduce another Supabase project solely for duplicate ecosystem memory.
+
+Tenant and domain isolation remain mandatory even though the canonical persistence platform is shared.
 
 ## Assistant model
 
@@ -108,9 +157,13 @@ bitey-enterprise/
 │   ├── index.html
 │   ├── app.js
 │   ├── styles.css
+│   ├── auth.js
+│   ├── api.js
 │   ├── _headers
 │   ├── _redirects
 │   └── 404.html
+├── functions/
+│   └── api/v1/
 ├── docs/
 ├── README.md
 └── wrangler.toml
@@ -118,7 +171,7 @@ bitey-enterprise/
 
 ### Cloudflare Pages target
 
-The intended deployment target is **Cloudflare Pages**, publishing the `web/` directory without an unnecessary build step.
+The deployment target is **Cloudflare Pages**, publishing the `web/` directory while keeping the Pages Functions `functions/` directory at the project root.
 
 Deployment configuration should remain compatible with the free Cloudflare Pages offering wherever practical. No paid service or automatic billing commitment should be introduced without explicit approval.
 
@@ -132,31 +185,34 @@ Deployment configuration should remain compatible with the free Cloudflare Pages
 - Human escalation for uncertain or unsupported business facts
 - Channel identities scoped to the correct assistant and company
 - No secrets committed to the repository
+- Shared Supabase access must remain protected by authenticated contracts and RLS
+- Enterprise must not bypass the central cognitive/business backend boundaries
 
 ## Relationship to BiteFixes
 
-Bitey Enterprise is a reusable business product/control plane. **BiteFixes remains a separate system and must not be modified as part of normal Bitey Enterprise development.** Any future BiteFixes integration must be explicit and use a defined backend/API contract.
+BiteFixes remains the specialized enterprise domain and must not be modified as part of normal Bitey Enterprise development. Integration with BiteFixes Backend must use a defined backend/API contract.
+
+Bitey Enterprise is therefore a control plane, not a replacement for `bitefixes-backend` and not a replacement for the central `bitey-web` cognitive brain.
 
 ## Development direction
 
 The implementation should progress in this order:
 
 1. Stable web shell and navigation.
-2. Business and assistant provisioning model.
-3. Assistant configuration and personalization.
-4. Knowledge ingestion and validation.
-5. Channel configuration.
-6. Testing and AI readiness checks.
-7. Secure backend integration.
-8. Production activation controls.
-
-The current priority is to establish the independent Web application in this repository while keeping the Android application repository separate.
+2. Secure authentication and tenant resolution.
+3. Integration with the central Bitey/BiteFixes backend architecture.
+4. Business and assistant provisioning model.
+5. Assistant configuration and personalization.
+6. Knowledge ingestion and validation.
+7. Channel configuration.
+8. Testing and AI readiness checks.
+9. Production activation controls.
 
 ## Status
 
-**Web control-plane repository initialized.**
+**Web control-plane repository initialized and deployed to Cloudflare Pages.**
 
-The repository is currently the dedicated home for Bitey Enterprise Web. Production integrations and activation should remain disabled until their corresponding backend, security, tenant-isolation, and validation mechanisms are actually implemented.
+Production integrations and activation should remain disabled until their corresponding backend, security, tenant-isolation, shared-memory, and validation mechanisms are actually implemented and verified.
 
 ## License
 
