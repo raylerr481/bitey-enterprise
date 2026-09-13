@@ -1,3 +1,6 @@
+import { createStorage, PersistenceNotConfiguredError } from "../../lib/storage.js";
+import { createSupabaseClient, getBearerToken, SupabaseNotConfiguredError, SupabaseRequestError } from "../../lib/supabase.js";
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -8,13 +11,67 @@ function json(data, status = 200) {
   });
 }
 
-export async function onRequest() {
-  return json({
-    ok: false,
-    error: {
-      code: "TENANT_RESOLUTION_NOT_CONFIGURED",
-      message: "Tenant resolution is unavailable until authentication and persistence are configured.",
-    },
-    request_id: crypto.randomUUID(),
-  }, 503);
+export async function onRequestGet(context) {
+  const requestId = crypto.randomUUID();
+  const token = getBearerToken(context.request);
+  if (!token) {
+    return json({
+      ok: false,
+      error: { code: "AUTHENTICATION_REQUIRED", message: "Authentication is required." },
+      request_id: requestId,
+    }, 401);
+  }
+
+  try {
+    const supabase = createSupabaseClient(context.env);
+    const user = await supabase.getUser(token);
+    if (!user) {
+      return json({
+        ok: false,
+        error: { code: "INVALID_AUTHENTICATION", message: "The authentication token is invalid or expired." },
+        request_id: requestId,
+      }, 401);
+    }
+
+    const company = await createStorage(context.env, token).getCompanyForUser(user.id);
+    if (!company?.id) {
+      return json({
+        ok: false,
+        error: { code: "TENANT_NOT_FOUND", message: "No Enterprise company is assigned to this user." },
+        request_id: requestId,
+      }, 404);
+    }
+
+    return json({
+      ok: true,
+      data: {
+        tenant: {
+          company_id: company.id,
+          company_name: company.name || null,
+        },
+      },
+      request_id: requestId,
+    });
+  } catch (error) {
+    const status = error instanceof PersistenceNotConfiguredError
+      ? 503
+      : error instanceof SupabaseNotConfiguredError
+        ? 503
+        : error instanceof SupabaseRequestError
+          ? 502
+          : 500;
+
+    return json({
+      ok: false,
+      error: {
+        code: error.code || "INTERNAL_ERROR",
+        message: status === 503
+          ? "Enterprise persistence is not configured yet."
+          : status === 502
+            ? "Enterprise tenant lookup failed."
+            : "Enterprise tenant resolution failed.",
+      },
+      request_id: requestId,
+    }, status);
+  }
 }
