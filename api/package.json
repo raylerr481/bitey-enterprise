@@ -1,0 +1,7 @@
+{
+  "name": "bitey-enterprise-api",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Server-side API foundation for Bitey Enterprise"
+}
