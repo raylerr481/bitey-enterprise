@@ -19,15 +19,14 @@ export async function onRequest(context) {
     if (context.request.method === "GET") return json({ ok: true, data: await storage.listKnowledge(company.id, assistant.id), request_id: requestId });
     if (context.request.method === "POST") {
       const input = await context.request.json();
-      const url = typeof input?.url === "string" ? input.url.trim() : "";
-      if (!url || !/^https?:\/\//i.test(url)) return json({ ok: false, error: { code: "VALIDATION_FAILED", message: "A valid HTTP(S) source URL is required." }, request_id: requestId }, 400);
-      const data = await storage.addKnowledge(company.id, assistant.id, { source_type: "url", source_url: url, status: "pending" });
+      const sourceUri = typeof input?.source_uri === "string" ? input.source_uri.trim() : typeof input?.url === "string" ? input.url.trim() : "";
+      if (!sourceUri || !/^https?:\/\//i.test(sourceUri)) return json({ ok: false, error: { code: "VALIDATION_FAILED", message: "A valid HTTP(S) source URL is required." }, request_id: requestId }, 400);
+      const data = await storage.addKnowledge(company.id, assistant.id, { source_type: "url", name: input?.name || sourceUri, source_uri: sourceUri, status: "pending", metadata: {} });
       return json({ ok: true, data, request_id: requestId }, 201);
     }
-    if (context.request.method === "DELETE") return json({ ok: false, error: { code: "NOT_IMPLEMENTED", message: "Source deletion will be enabled after resource-id routing is added." }, request_id: requestId }, 501);
     return json({ ok: false, error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." }, request_id: requestId }, 405);
   } catch (error) {
-    const status = error instanceof PersistenceNotConfiguredError ? 503 : error instanceof SupabaseNotConfiguredError ? 503 : error instanceof SupabaseRequestError ? 502 : 500;
+    const status = error instanceof PersistenceNotConfiguredError || error instanceof SupabaseNotConfiguredError ? 503 : error instanceof SupabaseRequestError ? 502 : 500;
     return json({ ok: false, error: { code: error.code || "INTERNAL_ERROR", message: status === 503 ? "Enterprise persistence is not configured correctly yet." : "Enterprise request failed." }, request_id: requestId }, status);
   }
 }
