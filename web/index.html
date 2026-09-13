@@ -26,10 +26,25 @@
       <footer>Control plane · v0.1</footer>
     </aside>
     <main class="main">
-      <header class="topbar"><div><span class="eyebrow">ENTERPRISE CONTROL PLANE</span><h1 id="page-title">Business dashboard</h1></div><button class="profile">Workspace</button></header>
+      <header class="topbar">
+        <div><span class="eyebrow">ENTERPRISE CONTROL PLANE</span><h1 id="page-title">Business dashboard</h1></div>
+        <div class="profile-area">
+          <span id="auth-status">Signed out</span>
+          <button id="sign-out" class="profile" type="button" hidden>Sign out</button>
+        </div>
+      </header>
       <section id="app" class="content"></section>
     </main>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Set these values through the deployment configuration. Never place a service_role/secret key here.
+    window.BITEY_ENTERPRISE_SUPABASE = window.BITEY_ENTERPRISE_SUPABASE || {
+      url: '',
+      publishableKey: ''
+    };
+  </script>
+  <script src="./auth.js"></script>
   <script src="./api.js"></script>
   <script src="./app.js"></script>
 </body>
