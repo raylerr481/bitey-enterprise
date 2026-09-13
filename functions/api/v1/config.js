@@ -1,5 +1,3 @@
-import { SupabaseNotConfiguredError } from "../../lib/supabase.js";
-
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
