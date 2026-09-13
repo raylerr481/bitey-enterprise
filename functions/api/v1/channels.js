@@ -21,13 +21,16 @@ export async function onRequest(context) {
       const input = await context.request.json();
       const channel = String(input?.channel || "").toLowerCase();
       if (!["web", "telegram", "whatsapp"].includes(channel)) return json({ ok: false, error: { code: "VALIDATION_FAILED", message: "Unsupported channel." }, request_id: requestId }, 400);
-      const patch = { status: "configured" };
+      const patch = {};
+      if (typeof input?.enabled === "boolean") patch.enabled = input.enabled;
+      if (typeof input?.external_identity === "string") patch.external_identity = input.external_identity.trim() || null;
+      if (input?.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)) patch.metadata = input.metadata;
       const data = await storage.updateChannel(company.id, assistant.id, channel, patch);
-      return json({ ok: true, data, request_id: requestId });
+      return json({ ok: true, data, activation_allowed: false, request_id: requestId });
     }
     return json({ ok: false, error: { code: "METHOD_NOT_ALLOWED", message: "Method not allowed." }, request_id: requestId }, 405);
   } catch (error) {
-    const status = error instanceof PersistenceNotConfiguredError ? 503 : error instanceof SupabaseNotConfiguredError ? 503 : error instanceof SupabaseRequestError ? 502 : 500;
+    const status = error instanceof PersistenceNotConfiguredError || error instanceof SupabaseNotConfiguredError ? 503 : error instanceof SupabaseRequestError ? 502 : 500;
     return json({ ok: false, error: { code: error.code || "INTERNAL_ERROR", message: status === 503 ? "Enterprise persistence is not configured correctly yet." : "Enterprise request failed." }, request_id: requestId }, status);
   }
 }
