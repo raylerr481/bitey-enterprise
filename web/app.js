@@ -55,14 +55,17 @@ const views = {
 function save(){const key=tenantKey();if(!key)throw new Error('No verified user identity');localStorage.setItem(key,JSON.stringify(state));}
 function saveSession(data){session=data;if(data)sessionStorage.setItem(SESSION_KEY,JSON.stringify({user:data.user||null,expires_at:data.expires_at||null}));else sessionStorage.removeItem(SESSION_KEY);}
 async function checkSession(){
-  // Never trust browser-stored session data as proof of authentication.
   if(!api?.configured){session=null;sessionStorage.removeItem(SESSION_KEY);return null;}
-  const result=await api.auth.session();
-  if(result?.ok && result.authenticated && result.user){saveSession(result);return result;}
+  try {
+    const result=await api.auth.session();
+    if(result?.ok && result.authenticated && result.user){saveSession(result);return result;}
+  } catch (_) { /* Fail closed on network or parsing errors. */ }
   saveSession(null);return null;
 }
 function render(){
   const key=(location.hash||'#dashboard').slice(1);
+  const profileButton=document.querySelector('.profile');
+  if(profileButton){profileButton.textContent=session?'Sign out':'Workspace';profileButton.setAttribute('aria-label',session?'Sign out of Bitey Enterprise':'Workspace');}
   if(!session){
     const mode=key==='register'?'register':'login';
     document.body.classList.add('auth-mode');
@@ -82,12 +85,25 @@ function render(){
 }
 async function handleAuth(key,form){
   if(!api?.configured){render();return;}
+  const submit=form.querySelector('button[type="submit"]');
+  if(submit){submit.disabled=true;submit.textContent='Please wait…';}
   const data=Object.fromEntries(new FormData(form));
-  const result=key==='login'?await api.auth.login({email:data.email,password:data.password}):await api.auth.register(data);
+  let result;
+  try {
+    result=key==='login'?await api.auth.login({email:data.email,password:data.password}):await api.auth.register(data);
+  } catch (_) { result={ok:false,error:{message:'The authentication service could not be reached.'}}; }
   if(result?.ok && result.authenticated && result.user){saveSession(result);state=loadWorkspace();location.hash='#dashboard';render();return;}
   render();
   const note=document.querySelector('#app .notice');
   if(note)note.textContent=result?.error?.message||'Authentication failed. Check your details and try again.';
+}
+async function logout(){
+  try { if(api?.configured) await api.auth.logout(); } catch (_) { /* Always clear local view state. */ }
+  saveSession(null);
+  session=null;
+  state=structuredClone(defaults);
+  location.hash='#login';
+  render();
 }
 function bind(key){
   const form=document.querySelector('form');
@@ -96,5 +112,6 @@ function bind(key){
   document.querySelectorAll('[data-remove-source]').forEach(b=>b.onclick=()=>{state.knowledge.splice(Number(b.dataset.removeSource),1);save();render();});
   document.querySelectorAll('[data-channel]').forEach(b=>b.onclick=()=>{const k=b.dataset.channel;state.channels[k]=!state.channels[k];save();render();});
 }
+document.querySelector('.profile')?.addEventListener('click',()=>{if(session)logout();});
 window.addEventListener('hashchange',render);
 (async()=>{session=await checkSession();state=loadWorkspace();render();})();
